@@ -9,11 +9,12 @@ body { font-family: Arial; background:#f4f4f4; padding:20px; }
   background:white; padding:15px; max-width:500px;
   margin-bottom:15px; border-radius:6px;
 }
-input, textarea, button, select { width:100%; padding:8px; margin-top:8px; }
+input, textarea, button { width:100%; padding:8px; margin-top:8px; }
 .stars { display:flex; gap:5px; font-size:22px; cursor:pointer; }
 .star { color:#ccc; }
 .star.selected { color:gold; }
 .name { font-weight:bold; }
+.product { font-weight:bold; color: #333; margin-bottom:5px; }
 .rating { color:gold; margin-bottom:5px; }
 .date { font-size:12px; color:gray; }
 </style>
@@ -24,12 +25,7 @@ input, textarea, button, select { width:100%; padding:8px; margin-top:8px; }
 <h2>Leave a Review</h2>
 
 <div class="review-box">
-  <select id="productSelect">
-    <option value="product1">Product 1</option>
-    <option value="product2">Product 2</option>
-    <option value="product3">Product 3</option>
-  </select>
-
+  <input id="product" placeholder="Product name">
   <input id="name" placeholder="Your name">
   
   <div class="stars" id="starInput">
@@ -44,17 +40,17 @@ input, textarea, button, select { width:100%; padding:8px; margin-top:8px; }
   <button id="submitBtn">Submit Review</button>
 </div>
 
-<h2>Reviews</h2>
+<h2>All Reviews</h2>
 <div id="reviews"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
   getFirestore, collection, addDoc,
-  query, where, onSnapshot, serverTimestamp
+  onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// 🔹 Your Firebase config here
+// 🔹 Your Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyBBHjVfayq5AEPssUW2KU02Hg2bGNRj0II",
   authDomain: "ssc-rev1.firebaseapp.com",
@@ -71,7 +67,6 @@ const db = getFirestore(app);
 const reviewsRef = collection(db, "reviews");
 
 let selectedRating = 0;
-let currentProduct = document.getElementById("productSelect").value;
 
 // ⭐ Star selection
 document.querySelectorAll(".star").forEach(star => {
@@ -83,65 +78,54 @@ document.querySelectorAll(".star").forEach(star => {
   });
 });
 
-// 🔄 Handle product change
-document.getElementById("productSelect").addEventListener("change", (e) => {
-  currentProduct = e.target.value;
-  loadReviews(currentProduct);
-});
-
 // 📝 Submit review
 document.getElementById("submitBtn").addEventListener("click", async () => {
+  const product = document.getElementById("product").value.trim();
   const name = document.getElementById("name").value.trim();
   const review = document.getElementById("review").value.trim();
-  if (!name || !review || selectedRating === 0) {
+
+  if (!product || !name || !review || selectedRating === 0) {
     alert("Please fill out all fields and select a rating");
     return;
   }
 
   await addDoc(reviewsRef, {
+    product,
     name,
     review,
     rating: selectedRating,
-    productId: currentProduct,
     createdAt: serverTimestamp()
   });
 
+  document.getElementById("product").value = "";
   document.getElementById("name").value = "";
   document.getElementById("review").value = "";
   selectedRating = 0;
   document.querySelectorAll(".star").forEach(s => s.classList.remove("selected"));
 });
 
-// Function to load reviews for a specific product
-let unsubscribe = null;
-function loadReviews(product) {
-  if (unsubscribe) unsubscribe(); // Stop previous listener
+// 📡 Load all reviews
+onSnapshot(reviewsRef, snapshot => {
+  const container = document.getElementById("reviews");
+  container.innerHTML = "";
 
-  const q = query(reviewsRef, where("productId", "==", product));
-  unsubscribe = onSnapshot(q, snapshot => {
-    const container = document.getElementById("reviews");
-    container.innerHTML = "";
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    if (!data.createdAt) return;
+    const stars = "★".repeat(data.rating) + "☆".repeat(5 - data.rating);
 
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      if (!data.createdAt) return; // Skip if timestamp not ready
-      const stars = "★".repeat(data.rating) + "☆".repeat(5 - data.rating);
-
-      const div = document.createElement("div");
-      div.className = "review";
-      div.innerHTML = `
-        <div class="name">${data.name}</div>
-        <div class="rating">${stars}</div>
-        <div>${data.review}</div>
-        <div class="date">${data.createdAt.toDate().toLocaleString()}</div>
-      `;
-      container.appendChild(div);
-    });
+    const div = document.createElement("div");
+    div.className = "review";
+    div.innerHTML = `
+      <div class="product">Product: ${data.product}</div>
+      <div class="name">${data.name}</div>
+      <div class="rating">${stars}</div>
+      <div>${data.review}</div>
+      <div class="date">${data.createdAt.toDate().toLocaleString()}</div>
+    `;
+    container.appendChild(div);
   });
-}
-
-// Load initial product reviews
-loadReviews(currentProduct);
+});
 </script>
 
 </body>
