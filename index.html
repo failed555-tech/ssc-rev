@@ -86,6 +86,7 @@ document.querySelectorAll(".star").forEach(star => {
 
 // 📝 Submit review
 document.getElementById("submitBtn").addEventListener("click", async () => {
+  // Read dropdown value at submission time
   const product = document.getElementById("productSelect").value;
   const name = document.getElementById("name").value.trim();
   const review = document.getElementById("review").value.trim();
