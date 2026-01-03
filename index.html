@@ -9,7 +9,7 @@ body { font-family: Arial; background:#f4f4f4; padding:20px; }
   background:white; padding:15px; max-width:500px;
   margin-bottom:15px; border-radius:6px;
 }
-input, textarea, button { width:100%; padding:8px; margin-top:8px; }
+input, textarea, button, select { width:100%; padding:8px; margin-top:8px; }
 .stars { display:flex; gap:5px; font-size:22px; cursor:pointer; }
 .star { color:#ccc; }
 .star.selected { color:gold; }
@@ -25,7 +25,13 @@ input, textarea, button { width:100%; padding:8px; margin-top:8px; }
 <h2>Leave a Review</h2>
 
 <div class="review-box">
-  <input id="product" placeholder="Product name">
+  <select id="productSelect">
+    <option value="">-- Select a product --</option>
+    <option value="Product 1">Product 1</option>
+    <option value="Product 2">Product 2</option>
+    <option value="Product 3">Product 3</option>
+  </select>
+
   <input id="name" placeholder="Your name">
   
   <div class="stars" id="starInput">
@@ -80,28 +86,35 @@ document.querySelectorAll(".star").forEach(star => {
 
 // 📝 Submit review
 document.getElementById("submitBtn").addEventListener("click", async () => {
-  const product = document.getElementById("product").value.trim();
+  const product = document.getElementById("productSelect").value;
   const name = document.getElementById("name").value.trim();
   const review = document.getElementById("review").value.trim();
 
-  if (!product || !name || !review || selectedRating === 0) {
+  if (!product) { alert("Please select a product"); return; }
+  if (!name || !review || selectedRating === 0) {
     alert("Please fill out all fields and select a rating");
     return;
   }
 
-  await addDoc(reviewsRef, {
-    product,
-    name,
-    review,
-    rating: selectedRating,
-    createdAt: serverTimestamp()
-  });
+  try {
+    await addDoc(reviewsRef, {
+      product,
+      name,
+      review,
+      rating: selectedRating,
+      createdAt: serverTimestamp()
+    });
 
-  document.getElementById("product").value = "";
-  document.getElementById("name").value = "";
-  document.getElementById("review").value = "";
-  selectedRating = 0;
-  document.querySelectorAll(".star").forEach(s => s.classList.remove("selected"));
+    // Clear inputs
+    document.getElementById("productSelect").value = "";
+    document.getElementById("name").value = "";
+    document.getElementById("review").value = "";
+    selectedRating = 0;
+    document.querySelectorAll(".star").forEach(s => s.classList.remove("selected"));
+  } catch (err) {
+    console.error("Error submitting review:", err);
+    alert("Failed to submit review. Check Firebase rules and console.");
+  }
 });
 
 // 📡 Load all reviews
